@@ -64,7 +64,7 @@ jobs:
           # 3. Borrar los targets de extensiones para que Xcode ni intente compilarlos
           project.targets.reject! { |t| ext_names.include?(t.name) }
           project.save
-          echo "Extensiones eliminadas con exito"
+          puts "Extensiones eliminadas con exito"
           '
 
       - name: 6. Compilar VLC para iOS (Sin firma de Apple)
