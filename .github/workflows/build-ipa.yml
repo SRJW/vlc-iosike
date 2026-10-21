@@ -15,15 +15,9 @@ jobs:
       - name: 1. Descargar el código del repositorio
         uses: actions/checkout@v4
 
-      - name: 2. Seleccionar Xcode 16 (Soporte iOS 18 SDK)
+      - name: 2. Seleccionar Xcode 16.1 (Estable para iOS)
         run: |
-          if [ -d "/Applications/Xcode_16.2.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_16.1.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_16.0.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
-          fi
+          sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
           xcodebuild -version
 
       - name: 3. Cachear CocoaPods y SPM
@@ -49,10 +43,7 @@ jobs:
           
           ios_target = project.targets.find { |t| t.name == "VLC-iOS" }
           if ios_target
-            # 1. Quitar dependencias directas
             ios_target.dependencies.reject! { |d| d.target && ext_names.include?(d.target.name) }
-            
-            # 2. Quitar cualquier archivo .appex o Watch de todas las fases Copy Files
             ios_target.copy_files_build_phases.each do |phase|
               phase.files.reject! do |build_file|
                 name = build_file.display_name.to_s
@@ -61,10 +52,9 @@ jobs:
             end
           end
 
-          # 3. Borrar los targets de extensiones para que Xcode ni intente compilarlos
           project.targets.reject! { |t| ext_names.include?(t.name) }
           project.save
-          puts "Extensiones eliminadas con exito"
+          puts "Extensiones eliminadas con éxito"
           '
 
       - name: 6. Compilar VLC para iOS (Sin firma de Apple)
@@ -73,10 +63,8 @@ jobs:
             -workspace VLC.xcworkspace \
             -scheme "VLC-iOS" \
             -configuration Release \
-            -sdk iphonesimulator \
-            -destination "generic/platform=iOS Simulator" \
+            -sdk iphoneos \
             -derivedDataPath build_output \
-            VALID_ARCHS=arm64 \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -85,7 +73,7 @@ jobs:
       - name: 7. Empaquetar en formato .ipa
         run: |
           mkdir -p Payload
-          APP_PATH=$(find build_output/Build/Products/Release-iphonesimulator -maxdepth 1 -name "*.app" -type d | head -n 1)
+          APP_PATH=$(find build_output/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" -type d | head -n 1)
           echo "Empaquetando aplicación encontrada en: $APP_PATH"
           cp -r "$APP_PATH" Payload/
           zip -r -q VLC-LiquidGlass.ipa Payload
